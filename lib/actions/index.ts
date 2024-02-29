@@ -1,18 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import Product from "../models/productModels";
 import { connectToDB } from "../mongoose";
 import { scrapeAmazonProduct } from "../scraper";
 import { getAveragePrice, getHighestPrice, getLowestPrice } from "../utils";
 import { User } from "@/types";
 import { generateEmailBody, sendEmail } from "../nodemailer";
+import Product from "../models/productModels";
 
 export async function scrapeAndStoreProduct(productUrl: string) {
-  if (![productUrl]) return;
+  if (!productUrl) return;
 
   try {
     connectToDB();
+
     const scrapedProduct = await scrapeAmazonProduct(productUrl);
 
     if (!scrapedProduct) return;
@@ -37,9 +38,7 @@ export async function scrapeAndStoreProduct(productUrl: string) {
     }
 
     const newProduct = await Product.findOneAndUpdate(
-      {
-        url: scrapedProduct.url,
-      },
+      { url: scrapedProduct.url },
       product,
       { upsert: true, new: true }
     );
@@ -56,44 +55,41 @@ export async function getProductId(productId: string) {
 
     const product = await Product.findOne({ _id: productId });
 
-    if (!product) {
-      return null;
-    }
+    if (!product) return null;
 
     return product;
-  } catch (err) {
-    console.log(err);
+  } catch (error) {
+    console.log(error);
   }
 }
 
 export async function getAllProducts() {
   try {
     connectToDB();
+
     const products = await Product.find();
 
-    if (!products) {
-      return null;
-    }
     return products;
-  } catch (err) {
-    console.log(err);
+  } catch (error) {
+    console.log(error);
   }
 }
+
 export async function getSimilarProducts(productId: string) {
   try {
     connectToDB();
+
     const currentProduct = await Product.findById(productId);
 
-    if (!currentProduct) {
-      return null;
-    }
+    if (!currentProduct) return null;
 
     const similarProducts = await Product.find({
       _id: { $ne: productId },
     }).limit(3);
+
     return similarProducts;
-  } catch (err) {
-    console.log(err);
+  } catch (error) {
+    console.log(error);
   }
 }
 
@@ -119,5 +115,7 @@ export async function addUserEmailToProduct(
 
       await sendEmail(emailContent, [userEmail]);
     }
-  } catch (error) {}
+  } catch (error) {
+    console.log(error);
+  }
 }
